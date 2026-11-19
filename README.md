@@ -6,7 +6,7 @@ A modular portfolio project for healthcare data engineering, interoperability, a
 
 ## M1 — Foundation
 
-This starter provides FastAPI, PostgreSQL + pgvector, HAPI FHIR, MinIO, pytest, Ruff, GitHub Actions CI, and initial architecture/agent governance documentation.
+This starter provides FastAPI, PostgreSQL + pgvector, HAPI FHIR, S3-compatible Object Storage (PGSTY Silo),, pytest, Ruff, GitHub Actions CI, and initial architecture/agent governance documentation.
 
 ## Prerequisites
 
@@ -29,10 +29,10 @@ curl http://localhost:8000/ready
 |---|---|
 | FastAPI docs | http://localhost:8000/docs |
 | HAPI FHIR metadata | http://localhost:8080/fhir/metadata |
-| MinIO console | http://localhost:9001 |
+| SILO console | http://localhost:9001 |
 | PostgreSQL | localhost:5432 |
 
-MinIO credentials are in `.env`. Change all development placeholders before sharing the environment.
+SILO credentials are in `.env`. Change all development placeholders before sharing the environment.
 
 ## Local Python development
 
@@ -75,7 +75,7 @@ docker compose down -v
 
 | Local component | AWS target |
 |---|---|
-| MinIO | Amazon S3 |
+| SILO | Amazon S3 |
 | PostgreSQL | RDS for PostgreSQL / Aurora PostgreSQL |
 | FastAPI container | ECS or another approved container runtime |
 | Pipelines | Glue / Step Functions, depending on workload |
