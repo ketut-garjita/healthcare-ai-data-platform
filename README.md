@@ -143,13 +143,24 @@ docker compose down -v
 
 | Milestone | Scope | Status |
 |---|---|---|
-| M1 | Foundation: Docker, API, PostgreSQL, FHIR, object storage, CI | In progress |
-| M2 | FHIR, HL7 v2, X12, C-CDA ingestion | Planned |
+| M1 | Foundation: Docker, API, PostgreSQL, FHIR, object storage, CI | Completed |
+| M2 | FHIR, HL7 v2, X12, C-CDA ingestion | In progress |
 | M3 | Data quality, transformations, warehouse, lineage | Planned |
 | M4 | Clinical documents, embeddings, hybrid RAG, evaluation | Planned |
 | M5 | Identity, authorization, audit, privacy controls | Planned |
 | M6 | Analytics, observability, MLOps/LLMOps | Planned |
 | M7 | AWS architecture, IaC, deployment, cost controls | Planned |
+
+Detail progres M2:
+
+| Submilestone | Scope | Status |
+|--------|--------|--------|
+| M2.1 | FHIR R4 Integration | (Completed) |
+| M2.2 | HL7 v2 Integration | (Planned) |
+| M2.3 | C-CDA Integration | (Planned) |
+| M2.4 | X12 Integration | (Planned) |
+| M2.5 | Unified Ingestion Pipeline | (Planned) |
+
 
 ## AWS direction
 
