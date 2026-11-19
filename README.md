@@ -6,7 +6,7 @@ A modular portfolio project for healthcare data engineering, interoperability, a
 
 ## M1 — Foundation
 
-This starter provides FastAPI, PostgreSQL + pgvector, HAPI FHIR, S3-compatible Object Storage (PGSTY Silo),, pytest, Ruff, GitHub Actions CI, and initial architecture/agent governance documentation.
+This starter provides FastAPI, PostgreSQL + pgvector, HAPI FHIR, S3-compatible Object Storage (PGSTY Silo), pytest, Ruff, GitHub Actions CI, and initial architecture/agent governance documentation.
 
 ## Prerequisites
 
