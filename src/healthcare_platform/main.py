@@ -10,6 +10,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from healthcare_platform.config import settings
 from healthcare_platform.ingestion.fhir import FhirIngestionService
+from healthcare_platform.ingestion.hl7 import Hl7IngestionService
 from healthcare_platform.integrations.fhir.client import FhirCapabilityCache, FhirClient, FhirError
 from healthcare_platform.storage.silo import SiloObjectStore
 
@@ -61,6 +62,17 @@ def _object_store() -> SiloObjectStore:
 
 def _ingestion_service() -> FhirIngestionService:
     return FhirIngestionService(settings.database_url, _object_store(), settings.fhir_base_url)
+
+
+def _hl7_ingestion_service() -> Hl7IngestionService:
+    return Hl7IngestionService(
+        settings.database_url,
+        _object_store(),
+        settings.hl7_source_id,
+        settings.hl7_supported_versions,
+        settings.hl7_message_encoding,
+        settings.hl7_reconciliation_max_retries,
+    )
 
 
 def _raise_fhir_error(exc: FhirError) -> None:
@@ -190,6 +202,33 @@ def get_ingestion_status(ingestion_id: UUID) -> dict[str, Any]:
     if status is None:
         raise HTTPException(status_code=404, detail="Ingestion attempt not found")
     return status
+
+
+@app.get(
+    "/ingestions/hl7/{attempt_id}",
+    tags=["HL7 v2 Ingestion"],
+    dependencies=[Depends(require_fhir_api_token)],
+)
+def get_hl7_ingestion_status(attempt_id: UUID) -> dict[str, Any]:
+    try:
+        status = _hl7_ingestion_service().status(attempt_id)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="HL7 ingestion status is unavailable") from exc
+    if status is None:
+        raise HTTPException(status_code=404, detail="HL7 ingestion attempt not found")
+    return status
+
+
+@app.get(
+    "/integrations/hl7/metrics",
+    tags=["HL7 v2 Ingestion"],
+    dependencies=[Depends(require_fhir_api_token)],
+)
+def hl7_metrics() -> dict[str, int | float]:
+    try:
+        return _hl7_ingestion_service().metrics()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="HL7 metrics are unavailable") from exc
 
 
 @app.get("/health", tags=["Operations"])

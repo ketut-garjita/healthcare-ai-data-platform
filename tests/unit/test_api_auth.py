@@ -42,6 +42,8 @@ READ_ROUTES = [
     ("GET", "/integrations/fhir/Patient?identifier=synthetic-test"),
     ("GET", "/integrations/fhir/Patient/synthetic-test"),
     ("GET", "/ingestions/00000000-0000-0000-0000-000000000001"),
+    ("GET", "/integrations/hl7/metrics"),
+    ("GET", "/ingestions/hl7/00000000-0000-0000-0000-000000000001"),
 ]
 
 
@@ -67,7 +69,11 @@ def test_all_fhir_read_routes_accept_valid_token(monkeypatch, method, path) -> N
         def status(self, _ingestion_id):
             return {"status": "ingested", "outcome": "created"}
 
+        def metrics(self):
+            return {"received": 0}
+
     monkeypatch.setattr(main_module, "_ingestion_service", IngestionService)
+    monkeypatch.setattr(main_module, "_hl7_ingestion_service", IngestionService)
     response = request_route(method, path, {"Authorization": "Bearer test-token"})
     assert response.status_code == 200
 

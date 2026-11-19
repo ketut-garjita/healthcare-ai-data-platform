@@ -11,6 +11,16 @@ class Settings(BaseSettings):
     fhir_capability_cache_seconds: float = Field(default=60.0, ge=0.0, le=3600.0)
     fhir_search_max_pages: int = Field(default=10, ge=1, le=100)
     fhir_api_bearer_token: SecretStr | None = None
+    hl7_source_id: str = "local-hl7-mllp"
+    hl7_supported_versions: tuple[str, ...] = ("2.5.1",)
+    hl7_mllp_bind_host: str = "127.0.0.1"
+    hl7_mllp_port: int = Field(default=2575, ge=1, le=65535)
+    hl7_message_max_bytes: int = Field(default=1024 * 1024, ge=1024, le=10 * 1024 * 1024)
+    hl7_connection_timeout_seconds: float = Field(default=10.0, gt=0.0, le=300.0)
+    hl7_read_timeout_seconds: float = Field(default=30.0, gt=0.0, le=600.0)
+    hl7_max_connections: int = Field(default=20, ge=1, le=500)
+    hl7_reconciliation_max_retries: int = Field(default=3, ge=1, le=10)
+    hl7_message_encoding: str = "utf-8"
     silo_endpoint: str = Field(
         default="http://localhost:9000",
         validation_alias=AliasChoices("SILO_ENDPOINT", "MINIO_ENDPOINT"),

@@ -151,15 +151,72 @@ docker compose down -v
 | M6 | Analytics, observability, MLOps/LLMOps | Planned |
 | M7 | AWS architecture, IaC, deployment, cost controls | Planned |
 
-Detail progres M2:
+M2 progress:
 
 | Submilestone | Scope | Status |
 |--------|--------|--------|
 | M2.1 | FHIR R4 Integration | (Completed) |
-| M2.2 | HL7 v2 Integration | (Planned) |
+| M2.2 | HL7 v2 Integration | In progress |
 | M2.3 | C-CDA Integration | (Planned) |
 | M2.4 | X12 Integration | (Planned) |
 | M2.5 | Unified Ingestion Pipeline | (Planned) |
+
+## HL7 v2 integration (M2.2)
+
+The local development stack includes an inbound MLLP listener at `127.0.0.1:2575` (inside the
+Compose network: `hl7-mllp:2575`). It accepts version-configured HL7 v2.5.1 messages by default:
+ADT^A01/A02/A03/A04/A08/A40, ORM^O01, and ORU^R01. It emits MLLP-framed AA, AE, or AR
+acknowledgments. The listener binds loopback on the host and has no MLLP client authentication;
+use it only in the local trusted development environment.
+
+Configure `HL7_MLLP_BIND_HOST`, `HL7_MLLP_PORT`, `HL7_MLLP_HOST_PORT`, `HL7_SUPPORTED_VERSIONS`,
+`HL7_MESSAGE_MAX_BYTES`, `HL7_MAX_CONNECTIONS`, connection/read timeouts, and message encoding in
+`.env`. The listener admits at most `HL7_MAX_CONNECTIONS` live client sockets; excess connections
+are closed immediately before application handler tasks are created. The first frame must begin
+within `HL7_CONNECTION_TIMEOUT_SECONDS`; later frames use `HL7_READ_TIMEOUT_SECONDS`. For a host
+sender, send a complete VT + ER7 + FS + CR frame
+to `127.0.0.1:2575`. The adapter stores exact raw
+bytes in Silo and parsed JSONB/metadata plus attempts/history in PostgreSQL. Same sender identity
+and MSH-10 with identical bytes is idempotent; changed bytes under the same identity are recorded
+as a conflict and are not promoted over the accepted message.
+
+Apply migrations `008_hl7_v2_ingestion.sql`, `009_hl7_bounded_recovery.sql`,
+`010_hl7_retry_leases.sql`, and `011_hl7_processing_metrics.sql` to an existing database after the
+M2.1 migrations. Fresh databases apply
+the matching initialization SQL automatically. The protected status endpoint is
+`GET /ingestions/hl7/{attempt_id}` using the configured API bearer
+token. The MLLP listener returns `AA` only after raw Silo storage and PostgreSQL audit/state commit.
+No automatic Silo object deletion occurs. Use synthetic message data only; this listener is not
+intended for production hospital connectivity.
+
+The reconciler atomically claims either an expired `processing` attempt or an expired
+`failed`/`retryable` attempt with `FOR UPDATE SKIP LOCKED`. Active claims get a five-minute
+`lease_expires_at`; transient failures become eligible again after 30 seconds. `started_at` remains
+the original receipt time, retryable failures keep `completed_at` null, terminal outcomes set it, and
+`updated_at` changes on state transitions. Processing duration accumulates active generations and
+excludes recovery waiting; end-to-end elapsed time runs from receipt to terminal completion. Retry
+claims increment `retry_count` and are recorded in retry history. Raw bytes
+and the same content-addressed key remain available until recovery succeeds. The retry limit counts
+reconciliation claims; exhausted attempts are marked non-retryable and remain auditable. Non-retryable
+validation failures and accepted terminal attempts are never retried.
+
+Run the reconciler without deleting raw objects:
+
+```bash
+uv run python -m healthcare_platform.ingestion.reconcile_hl7 --limit 100
+```
+
+Recovery retries are capped by `HL7_RECONCILIATION_MAX_RETRIES` (default 3). A sender redelivery
+after a failed terminal attempt is recorded as a new audited attempt. ACKs remain `AA` only after
+raw and PostgreSQL persistence; retryable dependency failures receive `AE`, while unsupported,
+malformed A40 merge structure, and identity conflicts follow their documented `AR` behavior.
+
+Aggregate operational counters (without message identifiers) are available at the protected
+`GET /integrations/hl7/metrics` endpoint with separately named average processing and end-to-end
+elapsed durations. The MLLP listener admits at most `HL7_MAX_CONNECTIONS` live client sockets;
+excess connections close immediately instead of waiting in application tasks. The first frame uses
+`HL7_CONNECTION_TIMEOUT_SECONDS`, and later frames use `HL7_READ_TIMEOUT_SECONDS`. Keep the listener
+loopback-bound because MLLP transport authentication is not enabled.
 
 
 ## AWS direction

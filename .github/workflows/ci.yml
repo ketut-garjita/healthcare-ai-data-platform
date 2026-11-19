@@ -53,21 +53,25 @@ jobs:
       - name: Install project and development dependencies
         run: uv sync --locked --group dev
 
-      - name: Start PostgreSQL, HAPI FHIR, and Silo
-        run: docker compose up -d postgres fhir minio
+      - name: Configure local synthetic integration services
+        run: cp .env.example .env
+
+      - name: Start PostgreSQL, HAPI FHIR, Silo, and HL7 MLLP listener
+        run: docker compose up -d postgres fhir minio hl7-mllp
 
       - name: Wait for integration services
         run: |
           for attempt in $(seq 1 60); do
             if curl --fail --silent http://127.0.0.1:8080/fhir/metadata >/dev/null \
               && docker compose exec -T postgres pg_isready -U healthcare_app -d healthcare \
-              && curl --fail --silent http://127.0.0.1:9000/minio/health/ready >/dev/null; then
+              && curl --fail --silent http://127.0.0.1:9000/minio/health/ready >/dev/null \
+              && python -c 'import socket; socket.create_connection(("127.0.0.1", 2575), timeout=1).close()'; then
               exit 0
             fi
             sleep 2
           done
           docker compose ps
-          docker compose logs --tail=100 postgres fhir minio
+          docker compose logs --tail=100 postgres fhir minio hl7-mllp
           exit 1
 
       - name: Mandatory integration tests (skips fail the job)

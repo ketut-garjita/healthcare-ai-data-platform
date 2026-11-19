@@ -51,3 +51,26 @@ def test_missing_bucket_put_error_invalidates_readiness(monkeypatch) -> None:
     store.ensure_bucket()
 
     assert client.head_bucket.call_count == 2
+
+
+def test_immutable_raw_write_reuses_only_matching_content_hash(monkeypatch) -> None:
+    client = MagicMock()
+    client.head_object.return_value = {"Metadata": {"sha256": "a" * 64}}
+    monkeypatch.setattr("healthcare_platform.storage.silo.boto3.client", lambda *_a, **_k: client)
+    store = SiloObjectStore("http://silo:9000", "synthetic-key", "synthetic-secret", "raw")
+
+    store.put_raw_immutable("synthetic/key", b"synthetic", "a" * 64, "application/hl7-v2")
+
+    client.put_object.assert_not_called()
+
+
+def test_immutable_raw_write_rejects_content_address_collision(monkeypatch) -> None:
+    client = MagicMock()
+    client.head_object.return_value = {"Metadata": {"sha256": "b" * 64}}
+    monkeypatch.setattr("healthcare_platform.storage.silo.boto3.client", lambda *_a, **_k: client)
+    store = SiloObjectStore("http://silo:9000", "synthetic-key", "synthetic-secret", "raw")
+
+    with pytest.raises(ValueError, match="different hash"):
+        store.put_raw_immutable("synthetic/key", b"synthetic", "a" * 64, "application/hl7-v2")
+
+    client.put_object.assert_not_called()
