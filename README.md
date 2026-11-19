@@ -156,7 +156,7 @@ M2 progress:
 | Submilestone | Scope | Status |
 |--------|--------|--------|
 | M2.1 | FHIR R4 Integration | (Completed) |
-| M2.2 | HL7 v2 Integration | In progress |
+| M2.2 | HL7 v2 Integration | (Completed) |
 | M2.3 | C-CDA Integration | (Planned) |
 | M2.4 | X12 Integration | (Planned) |
 | M2.5 | Unified Ingestion Pipeline | (Planned) |
