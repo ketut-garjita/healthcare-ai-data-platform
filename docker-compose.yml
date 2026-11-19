@@ -23,6 +23,29 @@ services:
     restart: unless-stopped
     networks: [healthcare-net]
 
+  hl7-mllp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: healthcare-hl7-mllp
+    env_file:
+      - .env
+    command: ["python", "-m", "healthcare_platform.ingestion.hl7_mllp"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-healthcare_app}:${POSTGRES_PASSWORD:-change_me_local_only}@postgres:5432/${POSTGRES_DB:-healthcare}
+      SILO_ENDPOINT: http://minio:9000
+      SILO_ACCESS_KEY: ${MINIO_ROOT_USER:-local_minio_admin}
+      SILO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-change_me_minio_local_only}
+      SILO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-healthcare-raw}
+      HL7_MLLP_BIND_HOST: 0.0.0.0
+    ports:
+      - "127.0.0.1:${HL7_MLLP_HOST_PORT:-2575}:2575"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [healthcare-net]
+
   postgres:
     image: pgvector/pgvector:pg16
     container_name: healthcare-postgres

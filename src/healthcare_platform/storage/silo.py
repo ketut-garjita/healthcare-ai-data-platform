@@ -36,13 +36,19 @@ class SiloObjectStore:
                 self._client.create_bucket(Bucket=self.bucket)
             self._bucket_ready = True
 
-    def put_raw(self, key: str, payload: bytes, content_hash: str) -> None:
+    def put_raw(
+        self,
+        key: str,
+        payload: bytes,
+        content_hash: str,
+        content_type: str = "application/fhir+json",
+    ) -> None:
         try:
             self._client.put_object(
                 Bucket=self.bucket,
                 Key=key,
                 Body=payload,
-                ContentType="application/fhir+json",
+                ContentType=content_type,
                 Metadata={"sha256": content_hash},
             )
         except ClientError as exc:
@@ -52,3 +58,21 @@ class SiloObjectStore:
                 with self._bucket_lock:
                     self._bucket_ready = False
             raise
+
+    def put_raw_immutable(
+        self, key: str, payload: bytes, content_hash: str, content_type: str
+    ) -> None:
+        """Create raw content once, reusing an existing object only when its hash matches."""
+        try:
+            response = self._client.head_object(Bucket=self.bucket, Key=key)
+        except ClientError as exc:
+            code = exc.response.get("Error", {}).get("Code")
+            status = exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+            if code not in {"NoSuchKey", "NotFound", "404"} and status != 404:
+                raise
+        else:
+            existing_hash = response.get("Metadata", {}).get("sha256")
+            if existing_hash == content_hash:
+                return
+            raise ValueError("Content-addressed Silo key already exists with a different hash")
+        self.put_raw(key, payload, content_hash, content_type=content_type)
